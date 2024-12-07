@@ -34,57 +34,7 @@ void rotate(char& marker, dir_t& dir) {
             dir = RIGHT;
         }
     }
-    }
 }
-
-//0-no loop, 1-loop
-int run(vector<vector<char> >& grid, dir_t startPos)
-{
-    
-    dir_t currPos = startPos;
-    char dirChar = grid[currPos.first][currPos.second];
-    dir_t dir = TOP;
-    
-    map<pair<pair<int,int>, dir_t>, int> visitedMap;
-    
-    while (true) {
-        auto key = make_pair(currPos, dir);
-        // if current pos is not visited yet, increment visited count
-        if (!visitedMap.contains(key)) {
-            visitedMap[key] = 1;
-        } else {
-            visitedMap[key] = visitedMap[key] + 1;
-        }
-
-        if (visitedMap[key] == 2) {
-            // loop
-            return 1;
-        }
-
-        // calculate next pos based on direction
-        auto nextPos = make_pair(currPos.first + dir.first, currPos.second + dir.second);
-        int i = nextPos.first;
-        int j = nextPos.second;
-        // out of grid? patrolling is over.
-        if (i < 0 || i >= grid.size() || j < 0 || j >= grid[0].size()) {
-            break;
-        }
-
-        // Next one is obstacle? rotate.
-        if (grid[nextPos.first][nextPos.second] == '#' ) {
-            rotate(dirChar, dir);
-            continue;
-        } 
-
-        // update currPos to nextPos        
-        currPos = nextPos;
-        //cout << "Next Pos = ( " << currPos.first << "," << currPos.second << ")" << endl;
-
-    
-
-    }
-
-    return 0;
 }
 
 int main(int argc, char** argv) {
@@ -109,24 +59,44 @@ int main(int argc, char** argv) {
         grid.push_back(row);
     }
 
+    cout << "Start pos = " << startPos.first << "," << startPos.second << endl;
+    
+    int visitedCount = 1;
+    dir_t currPos = startPos;
+    char dirChar = grid[currPos.first][currPos.second];
+    dir_t dir = TOP;
+    
 
-
-    int numPosition = 0;
-    for (int i=0; i<grid.size(); i++) {
-        for(int j=0; j<grid[0].size(); j++) {
-            if (grid[i][j] == '#' || grid[i][j] == '^') continue;
-
-            grid[i][j] = '#';
-
-            // run and detect loop
-            if (run(grid, startPos) == 1) {
-                //cout << "valid obstacle: (" << i << "," << j << ")" << endl;
-                numPosition++;
-            }
-
-            grid[i][j] = '.';
+    while (true) {
+        // if current pos is not visited yet, increment visited count
+        if (grid[currPos.first][currPos.second] == '.') {
+            visitedCount++;
         }
+        // mark element as visited.
+        grid[currPos.first][currPos.second] = 'X'; // mark as visited
+
+        // calculate next pos based on direction
+        auto nextPos = make_pair(currPos.first + dir.first, currPos.second + dir.second);
+        int i = nextPos.first;
+        int j = nextPos.second;
+        // out of grid? patrolling is over.
+        if (i < 0 || i >= grid.size() || j < 0 || j >= grid[0].size()) {
+            break;
+        }
+
+        // Next one is obstacle? rotate.
+        if (grid[nextPos.first][nextPos.second] == '#') {
+            rotate(dirChar, dir);
+            continue;
+        } 
+
+        // update currPos to nextPos        
+        currPos = nextPos;
+        //cout << "Next Pos = ( " << currPos.first << "," << currPos.second << ")" << endl;
+
+    
+
     }
-  
-    cout << "Num positions " << numPosition << endl;
+
+    cout << "Visited count = " << visitedCount << endl;
 }
