@@ -25,11 +25,11 @@ void addToAntinodes(pair<int, int> node, map<pair<int, int>, bool> &antinodes, v
     {
         antinodes[node] = true;
         numAntinodes++;
-       // printf("Adding (%d,%d)\n", node.first, node.second);
+        //printf("Adding (%d,%d)\n", node.first, node.second);
     }
     else
     {
-        // printf("(%d,%d) exists already.\n", node.first, node.second);
+         //printf("(%d,%d) exists already.\n", node.first, node.second);
     }
 }
 
@@ -92,22 +92,30 @@ int solve(map<char, vector<pair<int, int>>>& antennas, vector<vector<char>>& gri
                 int direction = deltaCol > 0 ? -1 : deltaCol == 0 ? 0
                                                                   : 1;
 
+                int tmpDeltaRow = deltaRow;
+                int tmpDeltaCol = deltaCol;
                 int mult = 1;
-                printf("[%c] (%d,%d)->(%d,%d)\n", it->first, pair.first, pair.second, v[i].first, v[i].second);
-                while (mult < 50) 
+                // printf("[%c] (%d,%d)->(%d,%d)\n", it->first, pair.first, pair.second, v[i].first, v[i].second);
+                
+                while (tmpDeltaRow < grid.size() && abs(tmpDeltaCol) < grid[0].size()) 
                 {
-                    pos1 = make_pair(v[i].first - deltaRow, v[i].second + (abs(deltaCol) * direction));
-                    pos2 = make_pair(pair.first + deltaRow, pair.second - (abs(deltaCol) * direction));
+                    // cout << "-- Mult = " << mult << endl;
+                    pos1 = make_pair(v[i].first - tmpDeltaRow, v[i].second + (abs(tmpDeltaCol) * direction));
+                    pos2 = make_pair(pair.first + tmpDeltaRow, pair.second - (abs(tmpDeltaCol) * direction));
                     
                     addToAntinodes(pos1, antinodes, grid, numAntinodes);
                     addToAntinodes(pos2, antinodes, grid, numAntinodes);
 
                     mult++;
-                    deltaRow *= mult;
-                    deltaCol *= mult;
+                    tmpDeltaRow = deltaRow * mult;
+                    tmpDeltaCol = deltaCol * mult;
 
                     if (!withResonance) break;
                 } 
+                if (withResonance) {
+                    addToAntinodes(pair, antinodes, grid, numAntinodes);
+                    addToAntinodes(v[i], antinodes, grid, numAntinodes);
+                }
 
    
             }
@@ -116,7 +124,7 @@ int solve(map<char, vector<pair<int, int>>>& antennas, vector<vector<char>>& gri
         }
     }
 
-     printGrid(grid, antinodes);
+    //printGrid(grid, antinodes);
     return numAntinodes;
 }
 int main(int argc, char **argv)
