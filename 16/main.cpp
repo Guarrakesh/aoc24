@@ -93,15 +93,35 @@ int findBestSpots(grid_t& grid,
 
     return numOfSpots;
 }
+
+int getScoreOffset(const pair<int,int>& cell, const pair<int,int>&next, const pair<int,int>& source, pair<int,int> dir, pair<int,int> sourceDir) {
+      // Source has dir (0,0), exclude that.
+    if (cell != source) {
+        pair<int,int> prevDir = { 
+            cell.first - next.first,
+            cell.second - next.second
+        };
+
+        if (prevDir != dir) {
+           //  printf("Turning (%d,%d) -> (%d,%d)\n", prevDir.first, prevDir.second, dir.first, dir.second);
+            return 1000;
+        }
+    } else {
+        if (sourceDir != dir) {
+            return 1000;
+        }
+    }
+
+    return 0;
+}
 // Dijkstra modified
-long findMinimumScore(grid_t& grid, 
+long dijkstra(grid_t& grid, 
     pair<int,int> sourceDir, 
-    pair<int,int>& source,
+    pair<int,int> source,
     vector<vector<uint64_t>>& distMap,
     vector<vector<pair<int,int>>>& prevMap,
-    pair<int,int>& target,
-    vector<vector<vector<tuple<int,int,int>>>>& prevMap2
-     ) {
+    pair<int,int> target
+    ) {
     auto cmp = [](const pair<pair<int,int>, uint64_t>& lhs, const pair<pair<int,int>, uint64_t>& rhs) {
         return lhs.second < rhs.second;
     };
@@ -137,9 +157,7 @@ long findMinimumScore(grid_t& grid,
         //     minDist = min(minDist, cell.dist);
         //     continue;
         // }
-        if (grid[cell.first][cell.second] == 'E') {
-            target = cell;
-        }
+      
         for (auto d: dirs) {
             pair<int,int> next = { cell.first + d.first, cell.second + d.second }; 
 
@@ -147,39 +165,19 @@ long findMinimumScore(grid_t& grid,
                 continue;
             }
 
-            int dist = 1;
+
+            uint64_t offset = 1 + getScoreOffset(cell, prevMap[cell.first][cell.second], source, d, sourceDir);
             
-                // Source has dir (0,0), exclude that.
-            if (cell != source) {
-                pair<int,int> prevDir = { 
-                    cell.first - prevMap[cell.first][cell.second].first,
-                    cell.second - prevMap[cell.first][cell.second].second
-                };
-
-                if (prevDir != d) {
-                    //  printf("Turning (%d,%d) -> (%d,%d)\n", prevDir.first, prevDir.second, d.first, d.second);
-                    dist += 1000;
-                }
-            } else {
-                if (sourceDir != d) {
-                    dist += 1000;
-                }
-            }
-
-            uint64_t newDist = distMap[cell.first][cell.second] + dist;
+        
+            uint64_t newDist = distMap[cell.first][cell.second] + offset;
             //printf("(%d,%d)->(%d,%d) Curr Dist = %llu, Alt Dist = %llu\n",
             // cell.first, cell.second, next.first, next.second, distMap[next.first][next.second], newDist);
             if (newDist < distMap[next.first][next.second]) {
                 distMap[next.first][next.second] = newDist;
                 prevMap[next.first][next.second] = cell;
-                prevMap2[next.first][next.second].push_back({cell.first, cell.second, newDist});
                 q.push({next, newDist});
             }
                 
-                
-                
-                
-            
         }
     }
 
@@ -207,6 +205,9 @@ int main(int argc, char** argv) {
             if (line[j] == 'S') {
                 source = { i, j };
             }
+            if (line[j] == 'E') {
+                target = { i, j };
+            }
         }
         grid.push_back(gridRow);
         visited.push_back(visitedRow);
@@ -215,17 +216,61 @@ int main(int argc, char** argv) {
     
     vector<vector<uint64_t>> distMap ( grid.size(), vector<uint64_t>(grid[0].size(), INT64_MAX));
     vector<vector<pair<int,int>>> prevMap (grid.size(), vector<pair<int,int>>(grid[0].size()));
-    vector<vector<vector<tuple<int,int,int>>>> prevMap2 (grid.size(), vector<vector<tuple<int,int,int>>>(grid[0].size()));
     
     cout << "Running BFS..." << endl;
-    auto score = findMinimumScore(grid, {0,1}, source, distMap, prevMap, target, prevMap2);
-   printGrid(grid);
+    auto score = dijkstra(grid, {0,1}, source, distMap, prevMap, target);
+    //printGrid(grid);
     cout << "[Part1] Result is " << score << endl;
 
-    auto bestSpots = findBestSpots(grid, source, target, distMap, prevMap, prevMap2);
-   printGrid(grid);
-    cout << "[Part2] Result is " << bestSpots << endl;
-   
+    
+    //bfs 
+    queue<pair<int,int>> q;
+    q.push(target);
+    vector<pair<int,int>> dirs = { {0, 1}, {1,0}, {0,-1}, {-1,0}};
+    vector<vector<uint64_t>> distMap2 ( grid.size(), vector<uint64_t>(grid[0].size(), INT64_MAX));
+    vector<vector<pair<int,int>>> prevMap2 (grid.size(), vector<pair<int,int>>(grid[0].size()));
+    
+    pair<int,int> targetDir = { 
+                    -(target.first - prevMap[target.first][target.second].first),
+                    -(target.second - prevMap[target.first][target.second].second)
+                };
+    dijkstra(grid,targetDir, target, distMap2, prevMap2, target);
+
+    int count = 0;
+    
+    while (!q.empty()) {
+        auto cell = q.front();
+        q.pop();
+        count++;
+       
+        for (auto d: dirs) {
+            pair<int,int> next = { cell.first + d.first, cell.second + d.second }; 
+            if (!isValid(next.first, next.second, grid) || visited[next.first][next.second]== true) {
+                continue;
+            }
+            
+            int offset = 0;
+            pair<int,int> diff = {prevMap[next.first][next.second].first - next.first, prevMap[next.first][next.second].second - next.second};
+            printf("Dir (%d,%d) - Curr Dir (%d,%d)\n", diff.first, diff.first, d.first, d.second);
+            if (diff != d) {
+                offset = 1000;
+            }
+            if (distMap[next.first][next.second] + distMap2[next.first][next.second] + offset == score) {
+                visited[next.first][next.second] = true;
+                grid[next.first][next.second] = 'O';
+                q.push(next);
+            } else {
+                printf("(%d,%d) Score=%ld. Forwrd Score Score =%llu, Back Score= %llu. Offset=%d\n",next.first, next.second,
+                score,  distMap[next.first][next.second],
+                 distMap2[next.first][next.second], offset);
+
+            }
+        }    
+        cout << endl << endl;   
+    }
+    printGrid(grid);
+    cout << "[Part2] Result is " << count << endl;
+
 }
 
 // pt2: 672 wrong
